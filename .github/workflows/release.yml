@@ -1,0 +1,183 @@
+name: Build & Release CodeWhisper
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to create releases and upload assets
+
+jobs:
+  # ── Windows ──────────────────────────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root deps
+        run: npm install
+        working-directory: CodeMind
+
+      - name: Install renderer deps
+        run: npm install --legacy-peer-deps
+        working-directory: CodeMind/renderer
+
+      - name: Build React
+        run: npm run build
+        working-directory: CodeMind/renderer
+
+      - name: Build Windows .exe
+        run: npx electron-builder --win --publish never
+        working-directory: CodeMind
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: |
+            CodeMind/dist/*.exe
+            CodeMind/dist/*.msi
+
+  # ── macOS ─────────────────────────────────────────────────────────────────────
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install root deps
+        run: npm install
+        working-directory: CodeMind
+
+      - name: Install renderer deps
+        run: npm install --legacy-peer-deps
+        working-directory: CodeMind/renderer
+
+      - name: Build React
+        run: npm run build
+        working-directory: CodeMind/renderer
+
+      - name: Build macOS .dmg
+        run: npx electron-builder --mac --publish never
+        working-directory: CodeMind
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: Upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-build
+          path: |
+            CodeMind/dist/*.dmg
+            CodeMind/dist/*.zip
+
+  # ── Linux ─────────────────────────────────────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install system deps
+        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot dpkg
+
+      - name: Install root deps
+        run: npm install
+        working-directory: CodeMind
+
+      - name: Install renderer deps
+        run: npm install --legacy-peer-deps
+        working-directory: CodeMind/renderer
+
+      - name: Build React
+        run: npm run build
+        working-directory: CodeMind/renderer
+
+      - name: Build Linux packages
+        run: npx electron-builder --linux --publish never
+        working-directory: CodeMind
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-build
+          path: |
+            CodeMind/dist/*.AppImage
+            CodeMind/dist/*.deb
+            CodeMind/dist/*.rpm
+
+  # ── Create GitHub Release with all files ─────────────────────────────────────
+  release:
+    needs: [build-windows, build-mac, build-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Windows build
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-build
+          path: release-files
+
+      - name: Download macOS build
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-build
+          path: release-files
+
+      - name: Download Linux build
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          path: release-files
+
+      - name: List release files
+        run: ls -la release-files/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "CodeWhisper ${{ github.ref_name }}"
+          body: |
+            ## 🪄 CodeWhisper ${{ github.ref_name }}
+
+            AI-powered coding assistant — free desktop app for Windows, macOS, and Linux.
+
+            ### Download
+            | Platform | File |
+            |----------|------|
+            | 🖥 Windows | `CodeWhisper Setup *.exe` |
+            | 🍎 macOS | `CodeWhisper-*.dmg` |
+            | 🐧 Linux | `CodeWhisper-*.AppImage` |
+
+            ### What's new
+            - Full AI chat with OpenAI and local Ollama support
+            - Auto-fix errors, Bug Risk Detector
+            - Project Map, Live Preview, Smart Notepad
+            - Intelligence Panel with Flow, Impact, Quality Score
+          draft: false
+          prerelease: false
+          files: release-files/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
