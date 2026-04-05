@@ -96,7 +96,9 @@ jobs:
           node-version: 20
 
       - name: Install system deps
-        run: sudo apt-get update && sudo apt-get install -y rpm fakeroot dpkg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Install root deps
         run: npm install
@@ -109,8 +111,8 @@ jobs:
         run: npm run build
         working-directory: renderer
 
-      - name: Build Linux packages
-        run: npx electron-builder --linux --publish never
+      - name: Build Linux AppImage only
+        run: npx electron-builder --linux AppImage --publish never
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -118,10 +120,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
-          path: |
-            dist/*.AppImage
-            dist/*.deb
-            dist/*.rpm
+          path: dist/*.AppImage
+          if-no-files-found: warn
 
   # ── Create GitHub Release ─────────────────────────────────────────────────────
   release:
