@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # needed to create releases and upload assets
+  contents: write
 
 jobs:
   # ── Windows ──────────────────────────────────────────────────────────────────
@@ -24,19 +24,17 @@ jobs:
 
       - name: Install root deps
         run: npm install
-        working-directory: CodeMind
 
       - name: Install renderer deps
         run: npm install --legacy-peer-deps
-        working-directory: CodeMind/renderer
+        working-directory: renderer
 
       - name: Build React
         run: npm run build
-        working-directory: CodeMind/renderer
+        working-directory: renderer
 
       - name: Build Windows .exe
         run: npx electron-builder --win --publish never
-        working-directory: CodeMind
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -45,8 +43,8 @@ jobs:
         with:
           name: windows-build
           path: |
-            CodeMind/dist/*.exe
-            CodeMind/dist/*.msi
+            dist/*.exe
+            dist/*.msi
 
   # ── macOS ─────────────────────────────────────────────────────────────────────
   build-mac:
@@ -62,19 +60,17 @@ jobs:
 
       - name: Install root deps
         run: npm install
-        working-directory: CodeMind
 
       - name: Install renderer deps
         run: npm install --legacy-peer-deps
-        working-directory: CodeMind/renderer
+        working-directory: renderer
 
       - name: Build React
         run: npm run build
-        working-directory: CodeMind/renderer
+        working-directory: renderer
 
       - name: Build macOS .dmg
         run: npx electron-builder --mac --publish never
-        working-directory: CodeMind
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
@@ -84,8 +80,8 @@ jobs:
         with:
           name: mac-build
           path: |
-            CodeMind/dist/*.dmg
-            CodeMind/dist/*.zip
+            dist/*.dmg
+            dist/*.zip
 
   # ── Linux ─────────────────────────────────────────────────────────────────────
   build-linux:
@@ -104,19 +100,17 @@ jobs:
 
       - name: Install root deps
         run: npm install
-        working-directory: CodeMind
 
       - name: Install renderer deps
         run: npm install --legacy-peer-deps
-        working-directory: CodeMind/renderer
+        working-directory: renderer
 
       - name: Build React
         run: npm run build
-        working-directory: CodeMind/renderer
+        working-directory: renderer
 
       - name: Build Linux packages
         run: npx electron-builder --linux --publish never
-        working-directory: CodeMind
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -125,11 +119,11 @@ jobs:
         with:
           name: linux-build
           path: |
-            CodeMind/dist/*.AppImage
-            CodeMind/dist/*.deb
-            CodeMind/dist/*.rpm
+            dist/*.AppImage
+            dist/*.deb
+            dist/*.rpm
 
-  # ── Create GitHub Release with all files ─────────────────────────────────────
+  # ── Create GitHub Release ─────────────────────────────────────────────────────
   release:
     needs: [build-windows, build-mac, build-linux]
     runs-on: ubuntu-latest
@@ -152,9 +146,6 @@ jobs:
           name: linux-build
           path: release-files
 
-      - name: List release files
-        run: ls -la release-files/
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
@@ -170,12 +161,6 @@ jobs:
             | 🖥 Windows | `CodeWhisper Setup *.exe` |
             | 🍎 macOS | `CodeWhisper-*.dmg` |
             | 🐧 Linux | `CodeWhisper-*.AppImage` |
-
-            ### What's new
-            - Full AI chat with OpenAI and local Ollama support
-            - Auto-fix errors, Bug Risk Detector
-            - Project Map, Live Preview, Smart Notepad
-            - Intelligence Panel with Flow, Impact, Quality Score
           draft: false
           prerelease: false
           files: release-files/*
