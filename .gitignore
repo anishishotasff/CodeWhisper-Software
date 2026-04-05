@@ -1,0 +1,7 @@
+node_modules/
+renderer/node_modules/
+renderer/build/
+dist/
+*.bak
+.env
+renderer/.env
