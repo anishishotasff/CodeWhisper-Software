@@ -10,15 +10,13 @@ permissions:
   contents: write
 
 jobs:
-  # ── Windows ──────────────────────────────────────────────────────────────────
+  # ── Windows ───────────────────────────────────────────────────────────────────
   build-windows:
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -29,32 +27,30 @@ jobs:
         run: npm install --legacy-peer-deps
         working-directory: renderer
 
-      - name: Build React
+      - name: Build renderer
         run: npm run build
         working-directory: renderer
-
-      - name: Build Windows .exe
-        run: npx electron-builder --win --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CI: false
+          GENERATE_SOURCEMAP: false
+
+      - name: Build Windows installer
+        run: npx electron-builder --win --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-build
-          path: |
-            dist/*.exe
-            dist/*.msi
+          path: dist/*.exe
+          if-no-files-found: error
 
   # ── macOS ─────────────────────────────────────────────────────────────────────
   build-mac:
     runs-on: macos-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -65,40 +61,46 @@ jobs:
         run: npm install --legacy-peer-deps
         working-directory: renderer
 
-      - name: Build React
+      - name: Build renderer
         run: npm run build
         working-directory: renderer
+        env:
+          CI: false
+          GENERATE_SOURCEMAP: false
 
-      - name: Build macOS .dmg
+      - name: Build macOS dmg
         run: npx electron-builder --mac --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: false
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: mac-build
-          path: |
-            dist/*.dmg
-            dist/*.zip
+          path: dist/*.dmg
+          if-no-files-found: error
 
   # ── Linux ─────────────────────────────────────────────────────────────────────
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node 20
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+          sudo apt-get install -y \
+            libgtk-3-dev \
+            libwebkit2gtk-4.0-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            fuse \
+            libfuse2
 
       - name: Install root deps
         run: npm install
@@ -107,14 +109,17 @@ jobs:
         run: npm install --legacy-peer-deps
         working-directory: renderer
 
-      - name: Build React
+      - name: Build renderer
         run: npm run build
         working-directory: renderer
+        env:
+          CI: false
+          GENERATE_SOURCEMAP: false
 
-      - name: Build Linux AppImage only
+      - name: Build Linux AppImage
         run: npx electron-builder --linux AppImage --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USE_SYSTEM_FPM: true
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -127,24 +132,31 @@ jobs:
   release:
     needs: [build-windows, build-mac, build-linux]
     runs-on: ubuntu-latest
+    if: always() && (needs.build-windows.result == 'success' || needs.build-mac.result == 'success')
     steps:
       - name: Download Windows build
         uses: actions/download-artifact@v4
         with:
           name: windows-build
           path: release-files
+        continue-on-error: true
 
       - name: Download macOS build
         uses: actions/download-artifact@v4
         with:
           name: mac-build
           path: release-files
+        continue-on-error: true
 
       - name: Download Linux build
         uses: actions/download-artifact@v4
         with:
           name: linux-build
           path: release-files
+        continue-on-error: true
+
+      - name: List release files
+        run: ls -la release-files/ || echo "No files found"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -156,11 +168,11 @@ jobs:
             AI-powered coding assistant — free desktop app for Windows, macOS, and Linux.
 
             ### Download
-            | Platform | File |
-            |----------|------|
-            | 🖥 Windows | `CodeWhisper Setup *.exe` |
-            | 🍎 macOS | `CodeWhisper-*.dmg` |
-            | 🐧 Linux | `CodeWhisper-*.AppImage` |
+            | Platform | File | Notes |
+            |----------|------|-------|
+            | 🖥 Windows | `CodeWhisper Setup *.exe` | Run installer, follow prompts |
+            | 🍎 macOS | `CodeWhisper-*.dmg` | Open DMG, drag to Applications |
+            | 🐧 Linux | `CodeWhisper-*.AppImage` | `chmod +x` then run |
           draft: false
           prerelease: false
           files: release-files/*
