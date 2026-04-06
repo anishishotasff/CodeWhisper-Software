@@ -162,6 +162,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "CodeWhisper ${{ github.ref_name }}"
+          repository: anishishotasff/CodeWhisper-Releases
+          token: ${{ secrets.RELEASE_TOKEN }}
           body: |
             ## 🪄 CodeWhisper ${{ github.ref_name }}
 
@@ -176,5 +178,3 @@ jobs:
           draft: false
           prerelease: false
           files: release-files/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
