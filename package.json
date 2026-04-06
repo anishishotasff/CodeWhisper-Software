@@ -1,6 +1,6 @@
 {
   "name": "codewhisper",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "AI-powered coding assistant desktop app",
   "main": "main/index.js",
   "scripts": {
