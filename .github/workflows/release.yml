@@ -74,9 +74,11 @@ jobs:
           REACT_APP_GEMINI_KEY: ${{ secrets.REACT_APP_GEMINI_KEY }}
 
       - name: Build macOS dmg
-        run: npx electron-builder --mac --publish never
+        run: npx electron-builder --mac dmg --x64 --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+          CSC_LINK: ''
+          CSC_KEY_PASSWORD: ''
 
       - name: List dist files
         run: ls -la dist/
@@ -85,7 +87,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mac-build
-          path: dist/*.dmg
+          path: |
+            dist/*.dmg
+            dist/*.zip
           if-no-files-found: warn
 
   # ── Linux ─────────────────────────────────────────────────────────────────────

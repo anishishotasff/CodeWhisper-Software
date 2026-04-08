@@ -43,12 +43,13 @@
     },
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        { "target": "dmg", "arch": ["x64"] }
       ],
       "category": "public.app-category.developer-tools",
       "darkModeSupport": true,
       "hardenedRuntime": false,
-      "gatekeeperAssess": false
+      "gatekeeperAssess": false,
+      "identity": null
     },
     "linux": {
       "target": [
