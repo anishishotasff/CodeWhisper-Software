@@ -123,7 +123,8 @@ async function geminiChat({ apiKey, messages, maxTokens, temperature, jsonMode }
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-// ── Ollama ───────────────────────────────────────────────────────────────────async function ollamaChat({ ollamaUrl, model = 'llama3', messages, temperature, jsonMode }) {
+// ── Ollama ───────────────────────────────────────────────────────────────────
+async function ollamaChat({ ollamaUrl, model = 'llama3', messages, temperature, jsonMode }) {
   const url = `${ollamaUrl}/api/chat`;
 
   const body = {
