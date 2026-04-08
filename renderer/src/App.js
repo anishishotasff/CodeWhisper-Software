@@ -10,6 +10,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import AuthScreen from './components/AuthScreen';
 import CreditsWidget from './components/CreditsWidget';
 import ProjectBuilder from './components/ProjectBuilder';
+import UpdateBanner from './components/UpdateBanner';
 import { analyzeProject } from './utils/projectAnalyzer';
 import { loadAISettings, PROVIDERS } from './utils/aiProvider';
 import { loadCredits, setUserSession, clearUserSession } from './utils/creditsManager';
@@ -203,6 +204,9 @@ export default function App() {
 
   return (
     <div className="app">
+      {/* ── Update banner ── */}
+      <UpdateBanner />
+
       {/* ── Header ── */}
       <motion.header
         className="app-header"
