@@ -11,6 +11,7 @@ import AuthScreen from './components/AuthScreen';
 import CreditsWidget from './components/CreditsWidget';
 import ProjectBuilder from './components/ProjectBuilder';
 import UpdateBanner from './components/UpdateBanner';
+import SecretCodeModal, { isSecretUnlocked, getSecretApiKey } from './components/SecretCodeModal';
 import { analyzeProject } from './utils/projectAnalyzer';
 import { loadAISettings, PROVIDERS } from './utils/aiProvider';
 import { loadCredits, setUserSession, clearUserSession } from './utils/creditsManager';
@@ -57,13 +58,17 @@ export default function App() {
   );
   const [showAuth, setShowAuth] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [showSecretModal, setShowSecretModal] = useState(false);
   const [credits, setCredits] = useState(loadCredits);
   const [creditsTick, setCreditsTick] = useState(0); // force re-render on credit change
 
-  // Derive apiKey for components — '__local__' signals Ollama mode is active
-  const apiKey = aiSettings.provider === PROVIDERS.OPENAI
-    ? aiSettings.openaiKey
-    : '__local__';
+  // Derive apiKey — secret unlock overrides everything with the embedded key
+  const secretKey = getSecretApiKey();
+  const apiKey = secretKey
+    ? secretKey
+    : aiSettings.provider === PROVIDERS.OPENAI
+      ? aiSettings.openaiKey
+      : '__local__';
 
   // Keep refs so watcher callbacks always see latest values
   const selectedFileRef = useRef(selectedFile);
@@ -353,6 +358,22 @@ export default function App() {
               Sign In
             </motion.button>
           )}
+
+          {/* Secret unlock button — subtle, no label */}
+          <motion.button
+            onClick={() => setShowSecretModal(true)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 13, opacity: isSecretUnlocked() ? 0.9 : 0.25,
+              padding: '2px 4px', color: isSecretUnlocked() ? '#a855f7' : 'var(--text-muted)',
+              transition: 'opacity 0.2s',
+            }}
+            whileHover={{ opacity: 1, scale: 1.15 }}
+            whileTap={{ scale: 0.9 }}
+            title={isSecretUnlocked() ? '⭐ Premium Active' : ''}
+          >
+            {isSecretUnlocked() ? '⭐' : '🔐'}
+          </motion.button>
         </div>
       </motion.header>
 
@@ -490,6 +511,19 @@ export default function App() {
               }}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Secret code modal ── */}
+      <AnimatePresence>
+        {showSecretModal && (
+          <SecretCodeModal
+            onClose={() => setShowSecretModal(false)}
+            onUnlock={() => {
+              refreshCredits();
+              setAiSettings(prev => ({ ...prev, provider: PROVIDERS.OPENAI }));
+            }}
+          />
         )}
       </AnimatePresence>
 
