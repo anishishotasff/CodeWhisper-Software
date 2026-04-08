@@ -9,6 +9,7 @@ import AISettings from './components/AISettings';
 import WelcomeScreen from './components/WelcomeScreen';
 import AuthScreen from './components/AuthScreen';
 import CreditsWidget from './components/CreditsWidget';
+import ProjectBuilder from './components/ProjectBuilder';
 import { analyzeProject } from './utils/projectAnalyzer';
 import { loadAISettings, PROVIDERS } from './utils/aiProvider';
 import { loadCredits, setUserSession, clearUserSession } from './utils/creditsManager';
@@ -20,6 +21,8 @@ if (!window.electronAPI) {
     readTree:            () => Promise.resolve({ name: 'demo', path: '/', type: 'directory', children: [] }),
     readFile:            () => Promise.resolve({ content: '// Open in the desktop app to edit files', truncated: false }),
     writeFile:           () => Promise.resolve({ success: false, error: 'Not available in browser' }),
+    writeFiles:          () => Promise.resolve([]),
+    mkdir:               () => Promise.resolve({ success: false }),
     restoreBackup:       () => Promise.resolve({ success: false }),
     scanProject:         () => Promise.resolve([]),
     buildGraph:          () => Promise.resolve({ nodes: [], links: [] }),
@@ -52,6 +55,7 @@ export default function App() {
     () => localStorage.getItem('cw_welcomed') !== '1'
   );
   const [showAuth, setShowAuth] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
   const [credits, setCredits] = useState(loadCredits);
   const [creditsTick, setCreditsTick] = useState(0); // force re-render on credit change
 
@@ -222,6 +226,17 @@ export default function App() {
           transition={{ duration: 0.12 }}
         >
           {opening ? <><span className="spinner" /> {loadingPhase === 'scanning' ? 'Scanning files...' : 'Understanding...'}</> : '📂 Open Project'}
+        </motion.button>
+
+        <motion.button
+          className="btn btn-secondary"
+          onClick={() => setShowBuilder(true)}
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.94 }}
+          transition={{ duration: 0.12 }}
+          style={{ background: 'linear-gradient(135deg, rgba(124,58,237,0.2), rgba(6,182,212,0.1))', border: '1px solid rgba(124,58,237,0.3)', color: '#a855f7' }}
+        >
+          🏗 Build
         </motion.button>
 
         {projectPath && (
@@ -479,6 +494,27 @@ export default function App() {
           <AuthScreen
             onAuth={handleAuth}
             onSkip={() => setShowAuth(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Project Builder ── */}
+      <AnimatePresence>
+        {showBuilder && (
+          <ProjectBuilder
+            apiKey={apiKey}
+            aiSettings={aiSettings}
+            onProjectCreated={async (folderPath, tree) => {
+              setProjectPath(folderPath);
+              setTree(tree);
+              setSelectedFile(null);
+              setFileContent('');
+              setSummary('');
+              await window.electronAPI.watchFolder(folderPath);
+              setupWatchers(folderPath);
+              refreshCredits();
+            }}
+            onClose={() => setShowBuilder(false)}
           />
         )}
       </AnimatePresence>

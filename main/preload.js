@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readTree: (folderPath) => ipcRenderer.invoke('fs:readTree', folderPath),
   readFile: (filePath) => ipcRenderer.invoke('fs:readFile', filePath),
   writeFile: (filePath, content) => ipcRenderer.invoke('fs:writeFile', filePath, content),
+  writeFiles: (files) => ipcRenderer.invoke('fs:writeFiles', files),
+  mkdir: (dirPath) => ipcRenderer.invoke('fs:mkdir', dirPath),
   restoreBackup: (filePath) => ipcRenderer.invoke('fs:restoreBackup', filePath),
   scanProject: (folderPath) => ipcRenderer.invoke('fs:scanProject', folderPath),
   buildGraph: (folderPath) => ipcRenderer.invoke('fs:buildGraph', folderPath),

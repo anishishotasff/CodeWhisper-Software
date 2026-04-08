@@ -76,6 +76,32 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
 });
 
+// ── IPC: Create directory ────────────────────────────────────────────────────
+ipcMain.handle('fs:mkdir', async (_, dirPath) => {
+  try {
+    fs.mkdirSync(dirPath, { recursive: true });
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ── IPC: Write multiple files (for project builder) ──────────────────────────
+ipcMain.handle('fs:writeFiles', async (_, files) => {
+  // files: [{ path, content }]
+  const results = [];
+  for (const file of files) {
+    try {
+      fs.mkdirSync(path.dirname(file.path), { recursive: true });
+      fs.writeFileSync(file.path, file.content, 'utf-8');
+      results.push({ path: file.path, success: true });
+    } catch (err) {
+      results.push({ path: file.path, success: false, error: err.message });
+    }
+  }
+  return results;
+});
+
 // ── IPC: Open folder dialog ──────────────────────────────────────────────────
 ipcMain.handle('dialog:openFolder', async () => {
   const result = await dialog.showOpenDialog({ properties: ['openDirectory'] });
