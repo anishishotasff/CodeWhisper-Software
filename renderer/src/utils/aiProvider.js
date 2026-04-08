@@ -8,6 +8,7 @@
 export const PROVIDERS = {
   OPENAI: 'openai',
   OLLAMA: 'ollama',
+  GEMINI: 'gemini',
 };
 
 export const OLLAMA_MODELS = [
@@ -47,6 +48,9 @@ export async function chatComplete({
   if (provider === PROVIDERS.OLLAMA) {
     return ollamaChat({ ollamaUrl, model, messages, maxTokens, temperature, jsonMode });
   }
+  if (provider === PROVIDERS.GEMINI || (apiKey && apiKey.startsWith('AIza'))) {
+    return geminiChat({ apiKey, messages, maxTokens, temperature, jsonMode });
+  }
   return openaiChat({ apiKey, model, messages, maxTokens, temperature, jsonMode });
 }
 
@@ -75,8 +79,51 @@ async function openaiChat({ apiKey, model = 'gpt-4o-mini', messages, maxTokens, 
   return data.choices[0].message.content;
 }
 
-// ── Ollama ───────────────────────────────────────────────────────────────────
-async function ollamaChat({ ollamaUrl, model = 'llama3', messages, temperature, jsonMode }) {
+// ── Google Gemini ─────────────────────────────────────────────────────────────
+async function geminiChat({ apiKey, messages, maxTokens, temperature, jsonMode }) {
+  // Convert OpenAI-style messages to Gemini format
+  // System message gets prepended to first user message
+  const systemMsg = messages.find(m => m.role === 'system');
+  const chatMessages = messages.filter(m => m.role !== 'system');
+
+  const contents = chatMessages.map(m => ({
+    role: m.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: m.content }],
+  }));
+
+  // Prepend system prompt to first user message if exists
+  if (systemMsg && contents.length > 0 && contents[0].role === 'user') {
+    contents[0].parts[0].text = `${systemMsg.content}\n\n${contents[0].parts[0].text}`;
+  }
+
+  const body = {
+    contents,
+    generationConfig: {
+      maxOutputTokens: maxTokens,
+      temperature,
+      ...(jsonMode ? { responseMimeType: 'application/json' } : {}),
+    },
+  };
+
+  const model = 'gemini-1.5-flash';
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `Gemini API error ${res.status}`);
+  }
+
+  const data = await res.json();
+  return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+}
+
+// ── Ollama ───────────────────────────────────────────────────────────────────async function ollamaChat({ ollamaUrl, model = 'llama3', messages, temperature, jsonMode }) {
   const url = `${ollamaUrl}/api/chat`;
 
   const body = {

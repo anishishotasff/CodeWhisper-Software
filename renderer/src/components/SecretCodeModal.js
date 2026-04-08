@@ -5,7 +5,7 @@ import { saveCredits, loadCredits } from '../utils/creditsManager';
 // Secret code → unlocks premium + uses the embedded API key
 // The actual API key is read from env var (never hardcoded in source)
 const SECRET_CODE = 'codeislikemusic';
-const PREMIUM_API_KEY = process.env.REACT_APP_OPENAI_KEY || '';
+const PREMIUM_API_KEY = process.env.REACT_APP_GEMINI_KEY || '';
 
 export function isSecretUnlocked() {
   return localStorage.getItem('cw_secret_unlocked') === '1';
