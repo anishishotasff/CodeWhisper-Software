@@ -35,6 +35,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       webSecurity: false,
+      allowRunningInsecureContent: false,
     },
   });
 
@@ -54,6 +55,20 @@ function createWindow() {
       win.loadURL('http://localhost:3000');
     }
   }
+
+  // Allow Firebase auth popup windows
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.includes('firebaseapp.com') || url.includes('accounts.google.com')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 500, height: 650,
+          webPreferences: { nodeIntegration: false, contextIsolation: true },
+        },
+      };
+    }
+    return { action: 'deny' };
+  });
 
   // Prevent white flash
   win.once('ready-to-show', () => win.show());

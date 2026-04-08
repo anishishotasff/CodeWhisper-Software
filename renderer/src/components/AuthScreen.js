@@ -29,25 +29,38 @@ async function firebaseSignUp(email, password) {
   return data;
 }
 
-// Google sign-in opens browser via Electron shell
+// Google sign-in for Electron — uses Firebase REST API with OAuth token
 async function firebaseGoogleSignIn() {
   if (!FIREBASE_API_KEY) throw new Error('Firebase not configured');
-  // Use Firebase REST API with Google OAuth
-  // Opens a popup window for Google auth
-  const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('firebase/app').then(() =>
-    import('firebase/auth')
-  );
+
+  // Build Google OAuth URL
+  const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
+  const redirectUri = 'https://codewhisper-66d6d.firebaseapp.com/__/auth/handler';
+
+  // Use Firebase's signInWithPopup via a dedicated auth window opened by Electron main
+  // We use the Firebase SDK directly since we have it installed
   const { initializeApp, getApps } = await import('firebase/app');
+  const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
 
   const config = {
     apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
     authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
     projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID,
   };
 
   const app = getApps().length ? getApps()[0] : initializeApp(config);
   const auth = getAuth(app);
+
+  // Allow popups in Electron by setting the auth settings
+  auth.settings = auth.settings || {};
+
   const provider = new GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+
   const result = await signInWithPopup(auth, provider);
   return { localId: result.user.uid, email: result.user.email };
 }
