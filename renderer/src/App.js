@@ -12,6 +12,10 @@ import CreditsWidget from './components/CreditsWidget';
 import ProjectBuilder from './components/ProjectBuilder';
 import UpdateBanner from './components/UpdateBanner';
 import SecretCodeModal, { isSecretUnlocked, getSecretApiKey } from './components/SecretCodeModal';
+import ExtensionsPanel from './components/ExtensionsPanel';
+import ThemePicker from './components/ThemePicker';
+import ProfilePanel from './components/ProfilePanel';
+import { loadTheme } from './utils/themeManager';
 import { analyzeProject } from './utils/projectAnalyzer';
 import { loadAISettings, PROVIDERS } from './utils/aiProvider';
 import { loadCredits, setUserSession, clearUserSession } from './utils/creditsManager';
@@ -59,7 +63,13 @@ export default function App() {
   const [showAuth, setShowAuth] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
   const [showSecretModal, setShowSecretModal] = useState(false);
+  const [showExtensions, setShowExtensions] = useState(false);
+  const [showThemes, setShowThemes] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [credits, setCredits] = useState(loadCredits);
+
+  // Apply saved theme on startup
+  useEffect(() => { loadTheme(); }, []);
   const [creditsTick, setCreditsTick] = useState(0); // force re-render on credit change
 
   // Derive apiKey — secret unlock overrides everything with the embedded key
@@ -359,6 +369,54 @@ export default function App() {
             </motion.button>
           )}
 
+          {/* Profile button */}
+          {credits.email && (
+            <motion.button
+              onClick={() => setShowProfile(v => !v)}
+              style={{
+                width: 28, height: 28, borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--accent), var(--success))',
+                border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 12, fontWeight: 900, color: '#fff',
+                fontFamily: 'inherit',
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              title="Profile"
+            >
+              {credits.email[0].toUpperCase()}
+            </motion.button>
+          )}
+
+          {/* Theme button */}
+          <motion.button
+            onClick={() => setShowThemes(v => !v)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 15, padding: '2px 4px', color: 'var(--text-muted)',
+            }}
+            whileHover={{ scale: 1.15, color: 'var(--accent)' }}
+            whileTap={{ scale: 0.9 }}
+            title="Color Theme"
+          >
+            🎨
+          </motion.button>
+
+          {/* Extensions button */}
+          <motion.button
+            onClick={() => setShowExtensions(v => !v)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              fontSize: 15, padding: '2px 4px', color: 'var(--text-muted)',
+            }}
+            whileHover={{ scale: 1.15, color: 'var(--accent)' }}
+            whileTap={{ scale: 0.9 }}
+            title="Extensions"
+          >
+            🧩
+          </motion.button>
+
           {/* Secret unlock button — subtle, no label */}
           <motion.button
             onClick={() => setShowSecretModal(true)}
@@ -511,6 +569,32 @@ export default function App() {
               }}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Extensions panel ── */}
+      <AnimatePresence>
+        {showExtensions && (
+          <ExtensionsPanel onClose={() => setShowExtensions(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── Theme picker ── */}
+      <AnimatePresence>
+        {showThemes && (
+          <ThemePicker onClose={() => setShowThemes(false)} />
+        )}
+      </AnimatePresence>
+
+      {/* ── Profile panel ── */}
+      <AnimatePresence>
+        {showProfile && (
+          <ProfilePanel
+            onClose={() => setShowProfile(false)}
+            onLogout={handleLogout}
+            onOpenThemes={() => { setShowProfile(false); setShowThemes(true); }}
+            onOpenExtensions={() => { setShowProfile(false); setShowExtensions(true); }}
+          />
         )}
       </AnimatePresence>
 
