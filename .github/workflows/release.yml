@@ -33,6 +33,7 @@ jobs:
         env:
           CI: false
           GENERATE_SOURCEMAP: false
+          REACT_APP_GEMINI_KEY: ${{ secrets.REACT_APP_GEMINI_KEY }}
 
       - name: Build Windows installer
         run: npx electron-builder --win --publish never
@@ -67,6 +68,7 @@ jobs:
         env:
           CI: false
           GENERATE_SOURCEMAP: false
+          REACT_APP_GEMINI_KEY: ${{ secrets.REACT_APP_GEMINI_KEY }}
 
       - name: Build macOS dmg
         run: npx electron-builder --mac --publish never
@@ -115,6 +117,7 @@ jobs:
         env:
           CI: false
           GENERATE_SOURCEMAP: false
+          REACT_APP_GEMINI_KEY: ${{ secrets.REACT_APP_GEMINI_KEY }}
 
       - name: Build Linux AppImage
         run: npx electron-builder --linux AppImage --publish never
