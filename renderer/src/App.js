@@ -90,7 +90,8 @@ export default function App() {
     setCredits(loadCredits());
   }, []);
 
-  // ── Listen for file-fixed events from CodeViewer ──────────────────────────  useEffect(() => {
+  // ── Listen for file-fixed events from CodeViewer ──────────────────────────
+  useEffect(() => {
     const handler = async (e) => {
       const { path: filePath, content } = e.detail;
       if (content) {
