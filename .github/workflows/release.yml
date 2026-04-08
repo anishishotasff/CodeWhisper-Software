@@ -42,7 +42,7 @@ jobs:
         with:
           name: windows-build
           path: dist/*.exe
-          if-no-files-found: error
+          if-no-files-found: warn
 
   # ── macOS ─────────────────────────────────────────────────────────────────────
   build-mac:
@@ -78,7 +78,7 @@ jobs:
         with:
           name: mac-build
           path: dist/*.dmg
-          if-no-files-found: error
+          if-no-files-found: warn
 
   # ── Linux ─────────────────────────────────────────────────────────────────────
   build-linux:
@@ -132,7 +132,7 @@ jobs:
   release:
     needs: [build-windows, build-mac, build-linux]
     runs-on: ubuntu-latest
-    if: always() && (needs.build-windows.result == 'success' || needs.build-mac.result == 'success')
+    if: always() && (needs.build-windows.result == 'success' || needs.build-mac.result == 'success' || needs.build-linux.result == 'success')
     steps:
       - name: Download Windows build
         uses: actions/download-artifact@v4
@@ -162,19 +162,26 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           name: "CodeWhisper ${{ github.ref_name }}"
-          repository: anishishotasff/CodeWhisper-Releases
-          token: ${{ secrets.RELEASE_TOKEN }}
           body: |
             ## 🪄 CodeWhisper ${{ github.ref_name }}
 
             AI-powered coding assistant — free desktop app for Windows, macOS, and Linux.
 
+            ### What's New
+            - 🏗 AI Project Builder — generate full projects from a prompt
+            - ⚡ Credit system (100 free credits/month)
+            - 🔐 Login / Signup in the app
+            - 🐛 Bug scanner & auto-fix
+            - 🗺 Project map visualization
+
             ### Download
-            | Platform | File | Notes |
-            |----------|------|-------|
-            | 🖥 Windows | `CodeWhisper Setup *.exe` | Run installer, follow prompts |
-            | 🍎 macOS | `CodeWhisper-*.dmg` | Open DMG, drag to Applications |
-            | 🐧 Linux | `CodeWhisper-*.AppImage` | `chmod +x` then run |
+            | Platform | File |
+            |----------|------|
+            | 🖥 Windows | `CodeWhisper Setup *.exe` |
+            | 🍎 macOS | `CodeWhisper-*.dmg` |
+            | 🐧 Linux | `CodeWhisper-*.AppImage` |
           draft: false
           prerelease: false
           files: release-files/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
