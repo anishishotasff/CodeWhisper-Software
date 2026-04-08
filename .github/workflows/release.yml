@@ -38,6 +38,9 @@ jobs:
       - name: Build Windows installer
         run: npx electron-builder --win --publish never
 
+      - name: List dist files
+        run: dir dist
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -74,6 +77,9 @@ jobs:
         run: npx electron-builder --mac --publish never
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - name: List dist files
+        run: ls -la dist/
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -124,6 +130,9 @@ jobs:
         env:
           USE_SYSTEM_FPM: true
 
+      - name: List dist files
+        run: ls -la dist/ || echo "No dist folder"
+
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -135,7 +144,7 @@ jobs:
   release:
     needs: [build-windows, build-mac, build-linux]
     runs-on: ubuntu-latest
-    if: always() && (needs.build-windows.result == 'success' || needs.build-mac.result == 'success' || needs.build-linux.result == 'success')
+    if: always()
     steps:
       - name: Download Windows build
         uses: actions/download-artifact@v4
@@ -158,8 +167,10 @@ jobs:
           path: release-files
         continue-on-error: true
 
-      - name: List release files
-        run: ls -la release-files/ || echo "No files found"
+      - name: Check release files
+        run: |
+          mkdir -p release-files
+          ls -la release-files/ || echo "No files"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -174,6 +185,8 @@ jobs:
             - 🏗 AI Project Builder — generate full projects from a prompt
             - ⚡ Credit system (100 free credits/month)
             - 🔐 Login / Signup in the app
+            - 🔐 Secret code for premium access
+            - 🔔 Auto update notifications
             - 🐛 Bug scanner & auto-fix
             - 🗺 Project map visualization
 
@@ -185,6 +198,8 @@ jobs:
             | 🐧 Linux | `CodeWhisper-*.AppImage` |
           draft: false
           prerelease: false
-          files: release-files/*
+          fail_on_unmatched_files: false
+          files: |
+            release-files/**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
