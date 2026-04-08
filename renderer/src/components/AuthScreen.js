@@ -33,12 +33,6 @@ async function firebaseSignUp(email, password) {
 async function firebaseGoogleSignIn() {
   if (!FIREBASE_API_KEY) throw new Error('Firebase not configured');
 
-  // Build Google OAuth URL
-  const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
-  const redirectUri = 'https://codewhisper-66d6d.firebaseapp.com/__/auth/handler';
-
-  // Use Firebase's signInWithPopup via a dedicated auth window opened by Electron main
-  // We use the Firebase SDK directly since we have it installed
   const { initializeApp, getApps } = await import('firebase/app');
   const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
 
@@ -53,16 +47,22 @@ async function firebaseGoogleSignIn() {
 
   const app = getApps().length ? getApps()[0] : initializeApp(config);
   const auth = getAuth(app);
-
-  // Allow popups in Electron by setting the auth settings
   auth.settings = auth.settings || {};
 
   const provider = new GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
 
-  const result = await signInWithPopup(auth, provider);
-  return { localId: result.user.uid, email: result.user.email };
+  try {
+    const result = await signInWithPopup(auth, provider);
+    return { localId: result.user.uid, email: result.user.email };
+  } catch (err) {
+    // If popup fails (e.g. in packaged Electron), give a clear message
+    if (err.code === 'auth/unauthorized-domain') {
+      throw new Error('Google sign-in requires adding "localhost" to Firebase authorized domains. Use email/password instead.');
+    }
+    throw err;
+  }
 }
 
 export default function AuthScreen({ onAuth, onSkip }) {
