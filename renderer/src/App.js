@@ -7,8 +7,11 @@ import Notepad from './components/Notepad';
 import ProjectMap from './components/ProjectMap';
 import AISettings from './components/AISettings';
 import WelcomeScreen from './components/WelcomeScreen';
+import AuthScreen from './components/AuthScreen';
+import CreditsWidget from './components/CreditsWidget';
 import { analyzeProject } from './utils/projectAnalyzer';
 import { loadAISettings, PROVIDERS } from './utils/aiProvider';
+import { loadCredits, setUserSession, clearUserSession } from './utils/creditsManager';
 
 // ── Safety shim: if running in browser (not Electron), mock electronAPI ──────
 if (!window.electronAPI) {
@@ -48,6 +51,9 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(
     () => localStorage.getItem('cw_welcomed') !== '1'
   );
+  const [showAuth, setShowAuth] = useState(false);
+  const [credits, setCredits] = useState(loadCredits);
+  const [creditsTick, setCreditsTick] = useState(0); // force re-render on credit change
 
   // Derive apiKey for components — '__local__' signals Ollama mode is active
   const apiKey = aiSettings.provider === PROVIDERS.OPENAI
@@ -62,8 +68,25 @@ export default function App() {
   useEffect(() => { selectedFileRef.current = selectedFile; }, [selectedFile]);
   useEffect(() => { projectPathRef.current = projectPath; }, [projectPath]);
 
-  // ── Listen for file-fixed events from CodeViewer ──────────────────────────
-  useEffect(() => {
+  // ── Refresh credits display ───────────────────────────────────────────────
+  const refreshCredits = useCallback(() => {
+    setCredits(loadCredits());
+    setCreditsTick(t => t + 1);
+  }, []);
+
+  // ── Auth handlers ─────────────────────────────────────────────────────────
+  const handleAuth = useCallback(({ uid, email, isNew }) => {
+    const updated = setUserSession(uid, email, 'free');
+    setCredits(updated);
+    setShowAuth(false);
+  }, []);
+
+  const handleLogout = useCallback(() => {
+    clearUserSession();
+    setCredits(loadCredits());
+  }, []);
+
+  // ── Listen for file-fixed events from CodeViewer ──────────────────────────  useEffect(() => {
     const handler = async (e) => {
       const { path: filePath, content } = e.detail;
       if (content) {
@@ -290,6 +313,26 @@ export default function App() {
               <><span>⚠️</span> No AI Key</>
             )}
           </motion.button>
+
+          {/* Credits widget */}
+          <CreditsWidget
+            key={creditsTick}
+            onLogout={handleLogout}
+            onRefresh={refreshCredits}
+          />
+
+          {/* Sign in button if not logged in */}
+          {!credits.email && (
+            <motion.button
+              className="btn btn-secondary"
+              style={{ fontSize: 11, padding: '4px 10px' }}
+              onClick={() => setShowAuth(true)}
+              whileHover={{ scale: 1.04 }}
+              whileTap={{ scale: 0.94 }}
+            >
+              Sign In
+            </motion.button>
+          )}
         </div>
       </motion.header>
 
@@ -357,6 +400,7 @@ export default function App() {
           apiKey={apiKey}
           aiSettings={aiSettings}
           liveReload={liveReload}
+          onCreditUsed={refreshCredits}
         />
 
         <ChatPanel
@@ -367,6 +411,7 @@ export default function App() {
           aiSettings={aiSettings}
           apiKey={apiKey}
           onApiKeyChange={(key) => setAiSettings(prev => ({ ...prev, openaiKey: key }))}
+          onCreditUsed={refreshCredits}
         />
       </motion.div>
 
@@ -425,6 +470,16 @@ export default function App() {
               }}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Auth screen ── */}
+      <AnimatePresence>
+        {showAuth && (
+          <AuthScreen
+            onAuth={handleAuth}
+            onSkip={() => setShowAuth(false)}
+          />
         )}
       </AnimatePresence>
 

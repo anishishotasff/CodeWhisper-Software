@@ -7,6 +7,7 @@ import LivePreview, { canPreview } from './LivePreview';
 import IntelligencePanel from './IntelligencePanel';
 import SmartActionPopup from './SmartActionPopup';
 import { chatComplete } from '../utils/aiProvider';
+import { hasCredits, deductCredits, CREDIT_COSTS } from '../utils/creditsManager';
 
 function getLang(ext) {
   const map = {
@@ -27,7 +28,7 @@ const NON_EDITABLE = new Set(['.png','.jpg','.jpeg','.gif','.svg','.ico','.woff'
 
 export default function CodeViewer({
   selectedFile, content, summary, analyzing,
-  onPinToNotepad, apiKey, aiSettings, liveReload,
+  onPinToNotepad, apiKey, aiSettings, liveReload, onCreditUsed,
 }) {
   // ── Edit mode state ──────────────────────────────────────────────────────────
   const [editMode, setEditMode]       = useState(false);
@@ -199,6 +200,17 @@ export default function CodeViewer({
   // ── AI Fix Errors ────────────────────────────────────────────────────────────
   const handleFixErrors = useCallback(async () => {
     if (!selectedFile || !content || !apiKey) return;
+
+    // Check credits (skip for Ollama)
+    if (aiSettings?.provider !== 'ollama') {
+      if (!hasCredits(CREDIT_COSTS.BUG_FIX)) {
+        setFixError('⚡ Out of credits. Resets next month or upgrade to Premium.');
+        return;
+      }
+      deductCredits(CREDIT_COSTS.BUG_FIX);
+      onCreditUsed?.();
+    }
+
     setFixing(true); setFixResult(null); setFixError(null);
     try {
       const lang = getLang(selectedFile.ext);

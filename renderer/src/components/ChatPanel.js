@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { chatComplete, PROVIDERS } from '../utils/aiProvider';
+import { hasCredits, deductCredits, CREDIT_COSTS } from '../utils/creditsManager';
 
 const QUICK_PROMPTS = [
   'Explain this project',
@@ -60,7 +61,7 @@ function AnimatedMessage({ msg, isLatest }) {
   );
 }
 
-export default function ChatPanel({ selectedFile, fileContent, summary, projectPath, aiSettings, apiKey, onApiKeyChange }) {
+export default function ChatPanel({ selectedFile, fileContent, summary, projectPath, aiSettings, apiKey, onApiKeyChange, onCreditUsed }) {
   const [messages, setMessages] = useState([
     { role: 'system', content: '👋 Hi! Open a project and ask me anything about your code. I can explain files, find bugs, suggest improvements, and more.' },
   ]);
@@ -104,6 +105,17 @@ export default function ChatPanel({ selectedFile, fileContent, summary, projectP
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userText }]);
     setLoading(true);
+
+    // Deduct credit (skip for local Ollama)
+    if (aiSettings?.provider !== PROVIDERS.OLLAMA) {
+      if (!hasCredits(CREDIT_COSTS.CHAT)) {
+        setMessages(prev => [...prev, { role: 'error', content: '⚡ Out of credits. Resets next month or upgrade to Premium.' }]);
+        setLoading(false);
+        return;
+      }
+      deductCredits(CREDIT_COSTS.CHAT);
+      onCreditUsed?.();
+    }
 
     try {
       const context = buildContext();
