@@ -93,8 +93,8 @@ process.on('unhandledRejection', (reason) => {
 
 // ── IPC: Google OAuth via dedicated BrowserWindow ────────────────────────────
 ipcMain.handle('auth:googleSignIn', async () => {
-  const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || '';
-  const AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || '';
+  const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyDCLy3OsHumYzudICGjP6iffv5UIYQFWAI';
+  const AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'codewhisper-6f0a5.firebaseapp.com';
 
   if (!FIREBASE_API_KEY || !AUTH_DOMAIN) return { error: 'Firebase not configured' };
 

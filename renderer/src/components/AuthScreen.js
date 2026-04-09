@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PhoneInput from './PhoneInput';
 
-const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyAUM5eXoSob0rQQ3J8_kLTZNlAIdqu0OLI';
-const FIREBASE_AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'codewhisper-66d6d.firebaseapp.com';
+const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyDCLy3OsHumYzudICGjP6iffv5UIYQFWAI';
+const FIREBASE_AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'codewhisper-6f0a5.firebaseapp.com';
 const BASE = 'https://identitytoolkit.googleapis.com/v1/accounts';
 
 async function firebaseSignIn(email, password) {
