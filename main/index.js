@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
@@ -89,6 +89,56 @@ process.on('uncaughtException', (err) => {
 });
 process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
+});
+
+// ── IPC: Google OAuth via system browser ─────────────────────────────────────
+ipcMain.handle('auth:googleSignIn', async () => {
+  const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || '';
+  const AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || '';
+
+  if (!FIREBASE_API_KEY) return { error: 'Firebase not configured' };
+
+  return new Promise((resolve) => {
+    // Create a small auth window
+    const authWin = new BrowserWindow({
+      width: 500,
+      height: 650,
+      show: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+      },
+    });
+
+    const authUrl = `https://${AUTH_DOMAIN}/__/auth/handler?` +
+      `apiKey=${FIREBASE_API_KEY}` +
+      `&providerId=google.com` +
+      `&scopes=email%20profile` +
+      `&redirectUrl=${encodeURIComponent(`https://${AUTH_DOMAIN}/__/auth/handler`)}`;
+
+    // Use Firebase's hosted auth page
+    const googleUrl = `https://accounts.google.com/o/oauth2/auth?` +
+      `client_id=` +
+      `&redirect_uri=${encodeURIComponent(`https://${AUTH_DOMAIN}/__/auth/handler`)}` +
+      `&response_type=token` +
+      `&scope=email%20profile`;
+
+    // Simpler: just load Firebase's own auth handler
+    authWin.loadURL(`https://${AUTH_DOMAIN}/__/auth/handler?` +
+      `apiKey=${FIREBASE_API_KEY}&providerId=google.com&scopes=email profile`
+    );
+
+    authWin.webContents.on('will-redirect', (event, url) => {
+      if (url.includes('access_token') || url.includes('id_token')) {
+        authWin.close();
+        resolve({ token: url });
+      }
+    });
+
+    authWin.on('closed', () => {
+      resolve({ error: 'cancelled' });
+    });
+  });
 });
 
 // ── IPC: Create directory ────────────────────────────────────────────────────
