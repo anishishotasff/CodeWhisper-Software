@@ -30,80 +30,33 @@ async function firebaseSignUp(email, password) {
   return data;
 }
 
-// ── Google — exchange Google ID token via REST (no domain check) ──────────────
+// ── Google — opens system browser, captures token via local server ────────────
 async function firebaseGoogleSignIn() {
   if (!FIREBASE_API_KEY) throw new Error('Firebase not configured');
   if (!FIREBASE_AUTH_DOMAIN) throw new Error('Firebase auth domain not configured');
 
-  // Step 1: Get Google OAuth token by opening a popup to Firebase's hosted auth page
-  // This page is on firebaseapp.com which is always authorized
-  const googleToken = await getGoogleTokenViaPopup();
-  if (!googleToken) throw new Error('Google sign-in was cancelled');
+  // Use Firebase's signInWithPopup but with the correct setup
+  // The popup URL must be the Firebase auth handler with proper params
+  const { initializeApp, getApps } = await import('firebase/app');
+  const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
 
-  // Step 2: Exchange the Google token with Firebase REST API (no domain check)
-  const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${FIREBASE_API_KEY}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        postBody: `id_token=${googleToken}&providerId=google.com`,
-        requestUri: `https://${FIREBASE_AUTH_DOMAIN}`,
-        returnIdpCredential: true,
-        returnSecureToken: true,
-      }),
-    }
-  );
-  const data = await res.json();
-  if (data.error) throw new Error(friendlyError(data.error.message));
-  return { localId: data.localId, email: data.email };
-}
+  const config = {
+    apiKey: FIREBASE_API_KEY,
+    authDomain: FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  };
 
-// Opens a small popup window to Firebase's hosted Google auth page
-function getGoogleTokenViaPopup() {
-  return new Promise((resolve) => {
-    const authUrl = `https://${FIREBASE_AUTH_DOMAIN}/__/auth/handler?` +
-      `apiKey=${FIREBASE_API_KEY}` +
-      `&providerId=google.com` +
-      `&scopes=email%20profile` +
-      `&redirectUrl=${encodeURIComponent(`https://${FIREBASE_AUTH_DOMAIN}/__/auth/handler`)}` +
-      `&v=9`;
+  const app = getApps().length ? getApps()[0] : initializeApp(config);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
 
-    const popup = window.open(authUrl, 'googleAuth', 'width=500,height=650,scrollbars=yes');
-
-    if (!popup) {
-      resolve(null);
-      return;
-    }
-
-    const timer = setInterval(() => {
-      try {
-        if (popup.closed) {
-          clearInterval(timer);
-          resolve(null);
-          return;
-        }
-        const url = popup.location.href;
-        if (url && url.includes('id_token=')) {
-          const match = url.match(/id_token=([^&]+)/);
-          if (match) {
-            clearInterval(timer);
-            popup.close();
-            resolve(decodeURIComponent(match[1]));
-          }
-        }
-      } catch {
-        // Cross-origin — keep waiting
-      }
-    }, 500);
-
-    // Timeout after 3 minutes
-    setTimeout(() => {
-      clearInterval(timer);
-      if (!popup.closed) popup.close();
-      resolve(null);
-    }, 180000);
-  });
+  const result = await signInWithPopup(auth, provider);
+  return { localId: result.user.uid, email: result.user.email };
 }
 
 function friendlyError(msg) {
