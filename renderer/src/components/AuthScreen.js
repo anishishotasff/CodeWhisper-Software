@@ -30,33 +30,22 @@ async function firebaseSignUp(email, password) {
   return data;
 }
 
-// ── Google — opens system browser, captures token via local server ────────────
+// ── Google — opens system browser with OAuth, catches token via local server ──
 async function firebaseGoogleSignIn() {
   if (!FIREBASE_API_KEY) throw new Error('Firebase not configured');
-  if (!FIREBASE_AUTH_DOMAIN) throw new Error('Firebase auth domain not configured');
 
-  // Use Firebase's signInWithPopup but with the correct setup
-  // The popup URL must be the Firebase auth handler with proper params
-  const { initializeApp, getApps } = await import('firebase/app');
-  const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+  // Use Electron IPC to handle Google auth in main process
+  // Main process opens a BrowserWindow with Firebase auth page
+  if (window.electronAPI && window.electronAPI.googleSignIn) {
+    const result = await window.electronAPI.googleSignIn();
+    if (result.error) {
+      if (result.error === 'cancelled') throw new Error('Google sign-in was cancelled');
+      throw new Error(result.error);
+    }
+    return { localId: result.uid, email: result.email };
+  }
 
-  const config = {
-    apiKey: FIREBASE_API_KEY,
-    authDomain: FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
-    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.REACT_APP_FIREBASE_APP_ID,
-  };
-
-  const app = getApps().length ? getApps()[0] : initializeApp(config);
-  const auth = getAuth(app);
-  const provider = new GoogleAuthProvider();
-  provider.addScope('email');
-  provider.addScope('profile');
-
-  const result = await signInWithPopup(auth, provider);
-  return { localId: result.user.uid, email: result.user.email };
+  throw new Error('Google sign-in not available in this environment');
 }
 
 function friendlyError(msg) {

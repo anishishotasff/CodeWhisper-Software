@@ -11,6 +11,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   writeFiles: (files) => ipcRenderer.invoke('fs:writeFiles', files),
   mkdir: (dirPath) => ipcRenderer.invoke('fs:mkdir', dirPath),
   restoreBackup: (filePath) => ipcRenderer.invoke('fs:restoreBackup', filePath),
+
+  // Auth
+  googleSignIn: () => ipcRenderer.invoke('auth:googleSignIn'),
   scanProject: (folderPath) => ipcRenderer.invoke('fs:scanProject', folderPath),
   buildGraph: (folderPath) => ipcRenderer.invoke('fs:buildGraph', folderPath),
   readPreviewBundle: (htmlPath) => ipcRenderer.invoke('fs:readPreviewBundle', htmlPath),

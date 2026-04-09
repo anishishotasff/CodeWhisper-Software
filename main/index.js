@@ -91,53 +91,77 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
 });
 
-// ── IPC: Google OAuth via system browser ─────────────────────────────────────
+// ── IPC: Google OAuth via dedicated BrowserWindow ────────────────────────────
 ipcMain.handle('auth:googleSignIn', async () => {
   const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || '';
   const AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || '';
 
-  if (!FIREBASE_API_KEY) return { error: 'Firebase not configured' };
+  if (!FIREBASE_API_KEY || !AUTH_DOMAIN) return { error: 'Firebase not configured' };
 
   return new Promise((resolve) => {
-    // Create a small auth window
     const authWin = new BrowserWindow({
-      width: 500,
-      height: 650,
-      show: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-      },
+      width: 500, height: 680, show: true,
+      title: 'Sign in with Google',
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
     });
 
-    const authUrl = `https://${AUTH_DOMAIN}/__/auth/handler?` +
-      `apiKey=${FIREBASE_API_KEY}` +
+    // Load Firebase's hosted auth page — always authorized
+    authWin.loadURL(
+      `https://${AUTH_DOMAIN}/__/auth/handler?` +
+      `apiKey=${encodeURIComponent(FIREBASE_API_KEY)}` +
+      `&appName=%5BDEFAULT%5D` +
+      `&authType=signInViaPopup` +
       `&providerId=google.com` +
       `&scopes=email%20profile` +
-      `&redirectUrl=${encodeURIComponent(`https://${AUTH_DOMAIN}/__/auth/handler`)}`;
-
-    // Use Firebase's hosted auth page
-    const googleUrl = `https://accounts.google.com/o/oauth2/auth?` +
-      `client_id=` +
-      `&redirect_uri=${encodeURIComponent(`https://${AUTH_DOMAIN}/__/auth/handler`)}` +
-      `&response_type=token` +
-      `&scope=email%20profile`;
-
-    // Simpler: just load Firebase's own auth handler
-    authWin.loadURL(`https://${AUTH_DOMAIN}/__/auth/handler?` +
-      `apiKey=${FIREBASE_API_KEY}&providerId=google.com&scopes=email profile`
+      `&eventId=0&v=10.7.0`
     );
 
-    authWin.webContents.on('will-redirect', (event, url) => {
-      if (url.includes('access_token') || url.includes('id_token')) {
-        authWin.close();
-        resolve({ token: url });
-      }
-    });
+    let resolved = false;
+
+    const tryResolve = (url) => {
+      if (resolved || !url) return;
+      try {
+        const u = new URL(url);
+        const hash = u.hash.replace('#', '');
+        const params = new URLSearchParams(hash);
+        const idToken = params.get('id_token');
+        const accessToken = params.get('access_token');
+        if (!idToken && !accessToken) return;
+
+        resolved = true;
+        if (!authWin.isDestroyed()) authWin.close();
+
+        fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key=${FIREBASE_API_KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            postBody: `id_token=${idToken || ''}&access_token=${accessToken || ''}&providerId=google.com`,
+            requestUri: `https://${AUTH_DOMAIN}`,
+            returnIdpCredential: true,
+            returnSecureToken: true,
+          }),
+        })
+          .then(r => r.json())
+          .then(data => resolve(data.error ? { error: data.error.message } : { uid: data.localId, email: data.email }))
+          .catch(err => resolve({ error: err.message }));
+      } catch {}
+    };
+
+    authWin.webContents.on('will-redirect', (_, url) => tryResolve(url));
+    authWin.webContents.on('will-navigate', (_, url) => tryResolve(url));
+    authWin.webContents.on('did-navigate', (_, url) => tryResolve(url));
 
     authWin.on('closed', () => {
-      resolve({ error: 'cancelled' });
+      if (!resolved) resolve({ error: 'cancelled' });
     });
+
+    setTimeout(() => {
+      if (!resolved) {
+        resolved = true;
+        if (!authWin.isDestroyed()) authWin.close();
+        resolve({ error: 'cancelled' });
+      }
+    }, 300000);
   });
 });
 
