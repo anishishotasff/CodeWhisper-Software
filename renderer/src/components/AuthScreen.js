@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || '';
-const FIREBASE_AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || '';
+const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyAUM5eXoSob0rQQ3J8_kLTZNlAIdqu0OLI';
+const FIREBASE_AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'codewhisper-66d6d.firebaseapp.com';
 const BASE = 'https://identitytoolkit.googleapis.com/v1/accounts';
 
 // ── Email/Password — pure REST, no domain check ───────────────────────────────
 async function firebaseSignIn(email, password) {
-  if (!FIREBASE_API_KEY) throw new Error('Firebase not configured. Add API key to .env');
   const res = await fetch(`${BASE}:signInWithPassword?key=${FIREBASE_API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -19,7 +18,6 @@ async function firebaseSignIn(email, password) {
 }
 
 async function firebaseSignUp(email, password) {
-  if (!FIREBASE_API_KEY) throw new Error('Firebase not configured. Add API key to .env');
   const res = await fetch(`${BASE}:signUp?key=${FIREBASE_API_KEY}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,10 +30,7 @@ async function firebaseSignUp(email, password) {
 
 // ── Google — opens system browser with OAuth, catches token via local server ──
 async function firebaseGoogleSignIn() {
-  if (!FIREBASE_API_KEY) throw new Error('Firebase not configured');
-
   // Use Electron IPC to handle Google auth in main process
-  // Main process opens a BrowserWindow with Firebase auth page
   if (window.electronAPI && window.electronAPI.googleSignIn) {
     const result = await window.electronAPI.googleSignIn();
     if (result.error) {
@@ -44,7 +39,6 @@ async function firebaseGoogleSignIn() {
     }
     return { localId: result.uid, email: result.email };
   }
-
   throw new Error('Google sign-in not available in this environment');
 }
 
