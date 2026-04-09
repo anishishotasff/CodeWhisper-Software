@@ -58,7 +58,7 @@ function createWindow() {
 
   // Allow Firebase auth popup windows
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (url.includes('firebaseapp.com') || url.includes('accounts.google.com')) {
+    if (url.includes('firebaseapp.com') || url.includes('accounts.google.com') || url.includes('firebase')) {
       return {
         action: 'allow',
         overrideBrowserWindowOptions: {
