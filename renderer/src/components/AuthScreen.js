@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import PhoneInput from './PhoneInput';
 
 const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyAUM5eXoSob0rQQ3J8_kLTZNlAIdqu0OLI';
 const FIREBASE_AUTH_DOMAIN = process.env.REACT_APP_FIREBASE_AUTH_DOMAIN || 'codewhisper-66d6d.firebaseapp.com';
@@ -212,7 +213,7 @@ export default function AuthScreen({ onAuth, onSkip }) {
             {!otpSent ? (
               <>
                 <div style={{ fontSize: 10, color: 'rgba(241,245,249,0.4)', marginBottom: 6 }}>Include country code (e.g. +91 9876543210)</div>
-                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+91 9876543210" style={inputStyle} />
+                <PhoneInput value={phone} onChange={setPhone} />
                 {error && <div style={{ marginBottom: 10, padding: '8px 12px', borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', fontSize: 11, color: '#f87171' }}>{error}</div>}
                 <motion.button onClick={handleSendOtp} disabled={loading}
                   style={{ width: '100%', padding: '10px', borderRadius: 10, background: 'linear-gradient(135deg, #7c3aed, #06b6d4)', color: '#fff', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: 13, fontWeight: 700, fontFamily: 'inherit', opacity: loading ? 0.7 : 1, marginBottom: 10 }}
