@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Auth
   googleSignIn: () => ipcRenderer.invoke('auth:googleSignIn'),
   getRecaptchaToken: () => ipcRenderer.invoke('auth:getRecaptchaToken'),
+  runCommand: (cmd, cwd) => ipcRenderer.invoke('shell:run', cmd, cwd),
   scanProject: (folderPath) => ipcRenderer.invoke('fs:scanProject', folderPath),
   buildGraph: (folderPath) => ipcRenderer.invoke('fs:buildGraph', folderPath),
   readPreviewBundle: (htmlPath) => ipcRenderer.invoke('fs:readPreviewBundle', htmlPath),

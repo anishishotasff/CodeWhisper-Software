@@ -11,6 +11,7 @@ import AuthScreen from './components/AuthScreen';
 import CreditsWidget from './components/CreditsWidget';
 import ProjectBuilder from './components/ProjectBuilder';
 import UpdateBanner from './components/UpdateBanner';
+import Terminal from './components/Terminal';
 import SecretCodeModal, { isSecretUnlocked, getSecretApiKey } from './components/SecretCodeModal';
 import ExtensionsPanel from './components/ExtensionsPanel';
 import ThemePicker from './components/ThemePicker';
@@ -66,6 +67,7 @@ export default function App() {
   const [showExtensions, setShowExtensions] = useState(false);
   const [showThemes, setShowThemes] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
   const [credits, setCredits] = useState(loadCredits);
 
   // Apply saved theme on startup
@@ -406,10 +408,26 @@ export default function App() {
             </motion.button>
           )}
 
+          {/* Terminal button */}
+          <motion.button
+            onClick={() => setShowTerminal(v => !v)}
+            style={{
+              background: showTerminal ? 'rgba(0,122,204,0.15)' : 'none',
+              border: showTerminal ? '1px solid rgba(0,122,204,0.3)' : 'none',
+              cursor: 'pointer', fontSize: 15, padding: '2px 6px',
+              color: showTerminal ? 'var(--accent)' : 'var(--text-muted)',
+              borderRadius: 6,
+            }}
+            whileHover={{ scale: 1.15, color: 'var(--accent)' }}
+            whileTap={{ scale: 0.9 }}
+            title="Terminal"
+          >
+            🖥
+          </motion.button>
+
           {/* Theme button */}
           <motion.button
-            onClick={() => setShowThemes(v => !v)}
-            style={{
+            onClick={() => setShowThemes(v => !v)}            style={{
               background: 'none', border: 'none', cursor: 'pointer',
               fontSize: 15, padding: '2px 4px', color: 'var(--text-muted)',
             }}
@@ -586,6 +604,16 @@ export default function App() {
               }}
             />
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Terminal ── */}
+      <AnimatePresence>
+        {showTerminal && (
+          <Terminal
+            projectPath={projectPath}
+            onClose={() => setShowTerminal(false)}
+          />
         )}
       </AnimatePresence>
 

@@ -91,6 +91,21 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
 });
 
+// ── IPC: Run shell command ────────────────────────────────────────────────────
+ipcMain.handle('shell:run', async (_, command, cwd) => {
+  const { exec } = require('child_process');
+  return new Promise((resolve) => {
+    const options = { cwd: cwd || process.cwd(), timeout: 30000, maxBuffer: 1024 * 1024 };
+    exec(command, options, (error, stdout, stderr) => {
+      resolve({
+        stdout: stdout || '',
+        stderr: stderr || '',
+        error: error ? error.message : null,
+      });
+    });
+  });
+});
+
 // ── IPC: Get reCAPTCHA Enterprise token for phone auth ────────────────────────
 ipcMain.handle('auth:getRecaptchaToken', async () => {
   const SITE_KEY = '6LeVI68sAAAAAMWe79Al3CHnFoZt2rrPxaM4ZD8o';
