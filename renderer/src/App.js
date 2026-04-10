@@ -252,8 +252,7 @@ export default function App() {
             <circle cx="78" cy="10" r="3" fill="#3b82f6" opacity="0.8"/>
             <circle cx="82" cy="62" r="4" fill="#7c3aed" opacity="0.8"/>
           </svg>
-          🪄 CodeWhisper
-        </motion.span>
+          🪄 CodeWhisper        </motion.span>
 
         <motion.button
           className="btn btn-primary"
