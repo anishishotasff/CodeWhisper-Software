@@ -91,6 +91,53 @@ process.on('unhandledRejection', (reason) => {
   console.error('Unhandled Rejection:', reason);
 });
 
+// ── IPC: Get reCAPTCHA Enterprise token for phone auth ────────────────────────
+ipcMain.handle('auth:getRecaptchaToken', async () => {
+  const SITE_KEY = '6LeVI68sAAAAAMWe79Al3CHnFoZt2rrPxaM4ZD8o';
+
+  return new Promise((resolve) => {
+    const win = new BrowserWindow({
+      width: 400, height: 300, show: false,
+      webPreferences: { nodeIntegration: false, contextIsolation: true },
+    });
+
+    // Load a page that has the reCAPTCHA script
+    win.loadURL(`https://codewhisper-6f0a5.firebaseapp.com`);
+
+    win.webContents.once('did-finish-load', async () => {
+      try {
+        // Inject reCAPTCHA Enterprise and execute
+        const token = await win.webContents.executeJavaScript(`
+          new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://www.google.com/recaptcha/enterprise.js?render=${SITE_KEY}';
+            script.onload = () => {
+              grecaptcha.enterprise.ready(async () => {
+                try {
+                  const t = await grecaptcha.enterprise.execute('${SITE_KEY}', { action: 'SEND_OTP' });
+                  resolve(t);
+                } catch(e) { resolve(''); }
+              });
+            };
+            script.onerror = () => resolve('');
+            document.head.appendChild(script);
+          })
+        `);
+        if (!win.isDestroyed()) win.close();
+        resolve(token || '');
+      } catch {
+        if (!win.isDestroyed()) win.close();
+        resolve('');
+      }
+    });
+
+    setTimeout(() => {
+      if (!win.isDestroyed()) win.close();
+      resolve('');
+    }, 20000);
+  });
+});
+
 // ── IPC: Google OAuth via dedicated BrowserWindow ────────────────────────────
 ipcMain.handle('auth:googleSignIn', async () => {
   const FIREBASE_API_KEY = process.env.REACT_APP_FIREBASE_API_KEY || 'AIzaSyDCLy3OsHumYzudICGjP6iffv5UIYQFWAI';

@@ -40,18 +40,23 @@ async function firebaseGoogleSignIn() {
 
 // Phone OTP via Firebase REST
 async function sendPhoneOtp(phone) {
-  // Firebase phone auth REST requires a recaptcha token
-  // We use a test token approach — works for verified test numbers
-  const res = await fetch(
-    `https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=${FIREBASE_API_KEY}`,
-    {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phoneNumber: phone, recaptchaToken: 'test-reCAPTCHA-token' }),
-    }
-  );
-  const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return data.sessionInfo;
+  // For Electron: use Firebase's sendVerificationCode with reCAPTCHA Enterprise
+  // The reCAPTCHA token is obtained by loading the Firebase auth page in a hidden window
+  // via the main process IPC handler
+  if (window.electronAPI && window.electronAPI.getRecaptchaToken) {
+    const token = await window.electronAPI.getRecaptchaToken();
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:sendVerificationCode?key=${FIREBASE_API_KEY}`,
+      {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: phone, recaptchaToken: token }),
+      }
+    );
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    return data.sessionInfo;
+  }
+  throw new Error('Phone OTP not available in this environment');
 }
 
 async function verifyPhoneOtp(sessionInfo, code) {
@@ -120,7 +125,7 @@ export default function AuthScreen({ onAuth, onSkip }) {
       const info = await sendPhoneOtp(phone);
       setSessionInfo(info); setOtpSent(true);
     } catch (err) {
-      setError('Phone OTP requires reCAPTCHA verification. Use email/password instead for now.');
+      setError(err.message || 'Failed to send OTP');
     }
     finally { setLoading(false); }
   };
