@@ -63,6 +63,20 @@ export default function App() {
   );
   const [showAuth, setShowAuth] = useState(false);
   const [showBuilder, setShowBuilder] = useState(false);
+
+  // Restore session on startup — never show auth again after first login
+  useEffect(() => {
+    const saved = localStorage.getItem('cw_session');
+    if (saved) {
+      try {
+        const { uid, email } = JSON.parse(saved);
+        if (uid && email) {
+          setUserSession(uid, email, loadCredits().plan);
+          setCredits(loadCredits());
+        }
+      } catch {}
+    }
+  }, []);
   const [showSecretModal, setShowSecretModal] = useState(false);
   const [showExtensions, setShowExtensions] = useState(false);
   const [showThemes, setShowThemes] = useState(false);
@@ -101,10 +115,13 @@ export default function App() {
     const updated = setUserSession(uid, email, 'free');
     setCredits(updated);
     setShowAuth(false);
+    // Save session so user stays logged in
+    localStorage.setItem('cw_session', JSON.stringify({ uid, email }));
   }, []);
 
   const handleLogout = useCallback(() => {
     clearUserSession();
+    localStorage.removeItem('cw_session');
     setCredits(loadCredits());
   }, []);
 
