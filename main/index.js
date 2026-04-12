@@ -161,10 +161,16 @@ ipcMain.handle('auth:googleSignIn', async () => {
   if (!FIREBASE_API_KEY || !AUTH_DOMAIN) return { error: 'Firebase not configured' };
 
   return new Promise((resolve) => {
+    // Open auth window — use session partition that shares cookies with default browser
     const authWin = new BrowserWindow({
       width: 500, height: 680, show: true,
       title: 'Sign in with Google',
-      webPreferences: { nodeIntegration: false, contextIsolation: true },
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        // Use persistent session so Google sees existing logins
+        partition: 'persist:google-auth',
+      },
     });
 
     // Load Firebase's hosted auth page — always authorized
