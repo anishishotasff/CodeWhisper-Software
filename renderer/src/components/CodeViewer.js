@@ -8,6 +8,7 @@ import IntelligencePanel from './IntelligencePanel';
 import SmartActionPopup from './SmartActionPopup';
 import { chatComplete } from '../utils/aiProvider';
 import { hasCredits, deductCredits, CREDIT_COSTS } from '../utils/creditsManager';
+import { formatWithPrettier, findTodos, getErrorLensAnnotations, trackWakaTime, getWakaStats, isInstalled } from '../utils/extensionsEngine';
 
 function getLang(ext) {
   const map = {
@@ -48,6 +49,7 @@ export default function CodeViewer({
   const [showBugs, setShowBugs]   = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showIntel, setShowIntel] = useState(false);
+  const [showTodos, setShowTodos] = useState(false);
 
   // Smart action popup state
   const [smartPopup, setSmartPopup] = useState(null); // { text, position }
@@ -59,8 +61,11 @@ export default function CodeViewer({
     setFixResult(null);
     setFixError(null);
     setShowDiff(false);
+    setShowTodos(false);
     // Auto-open preview for HTML/CSS/MD files
     setShowPreview(selectedFile ? canPreview(selectedFile.ext) : false);
+    // Track WakaTime
+    if (selectedFile) trackWakaTime(selectedFile.name);
   }, [selectedFile?.path]); // eslint-disable-line
 
   // Sync editContent when content prop changes (live reload / fix applied)
@@ -171,14 +176,24 @@ export default function CodeViewer({
     if (!selectedFile) return;
     setSaving(true);
     try {
-      const result = await window.electronAPI.writeFile(selectedFile.path, val ?? editContent);
+      let contentToSave = val ?? editContent;
+
+      // Prettier format on save if installed
+      if (isInstalled('prettier')) {
+        const formatted = await formatWithPrettier(contentToSave, selectedFile.ext);
+        if (formatted && formatted !== contentToSave) {
+          contentToSave = formatted;
+          setEditContent(formatted);
+        }
+      }
+
+      const result = await window.electronAPI.writeFile(selectedFile.path, contentToSave);
       if (result.success) {
         setUnsaved(false);
         setSaveMsg('saved');
         setTimeout(() => setSaveMsg(null), 2000);
-        // Notify App so it updates fileContent state
         window.dispatchEvent(new CustomEvent('codewhisper:fileFixed', {
-          detail: { path: selectedFile.path, content: val ?? editContent }
+          detail: { path: selectedFile.path, content: contentToSave }
         }));
       } else {
         setSaveMsg('error');
@@ -368,6 +383,22 @@ Fix all bugs, syntax errors, logic issues. Preserve style. If no errors, set has
             🐛 {showBugs ? 'Hide' : 'Bugs'}
           </button>
 
+          {/* TODO Highlight */}
+          {isInstalled('todo-highlight') && (
+            <button className={`btn ${showTodos ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ fontSize: 11, padding: '3px 9px' }}
+              onClick={() => setShowTodos(v => !v)}>
+              📌 TODOs ({findTodos(editMode ? editContent : content || '', selectedFile?.ext || '').length})
+            </button>
+          )}
+
+          {/* WakaTime */}
+          {isInstalled('wakatime') && getWakaStats() && (
+            <span style={{ fontSize: 10, color: 'var(--text-muted)', padding: '2px 6px', background: 'rgba(168,85,247,0.08)', borderRadius: 3 }}>
+              ⏱ {getWakaStats()}
+            </span>
+          )}
+
           {/* Intelligence panel */}
           <button
             className={`btn ${showIntel ? 'btn-primary' : 'btn-secondary'}`}
@@ -426,6 +457,26 @@ Fix all bugs, syntax errors, logic issues. Preserve style. If no errors, set has
         <div className="editor-hint-bar">
           <span>✏️ Editing — <kbd>Ctrl+S</kbd> save · <kbd>Tab</kbd> indent · <kbd>Shift+Tab</kbd> unindent · <kbd>Enter</kbd> auto-indent</span>
           {unsaved && <span style={{ color: 'var(--warning)', marginLeft: 'auto' }}>Unsaved changes</span>}
+        </div>
+      )}
+
+      {/* ── TODO Panel ── */}
+      {showTodos && isInstalled('todo-highlight') && (
+        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--border)', background: 'var(--bg-tertiary)', maxHeight: 140, overflowY: 'auto' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            📌 TODOs & FIXMEs
+          </div>
+          {findTodos(editMode ? editContent : content || '', selectedFile?.ext || '').length === 0 ? (
+            <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>No TODOs found ✓</div>
+          ) : (
+            findTodos(editMode ? editContent : content || '', selectedFile?.ext || '').map((todo, i) => (
+              <div key={i} style={{ display: 'flex', gap: 8, fontSize: 11, marginBottom: 4 }}>
+                <span style={{ color: todo.color, fontWeight: 700, minWidth: 50 }}>{todo.type}</span>
+                <span style={{ color: 'var(--text-muted)' }}>Line {todo.line}:</span>
+                <span style={{ color: 'var(--text-primary)' }}>{todo.text}</span>
+              </div>
+            ))
+          )}
         </div>
       )}
 
